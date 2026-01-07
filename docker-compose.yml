@@ -1,18 +1,31 @@
 version: '3'
 
 services:
-  # 1. TOR
+  # =========================================
+  # 1. TOR (Fixed: Runs as 'tor' user)
+  # =========================================
   tor:
     image: alpine:latest
     container_name: hydra-tor
-    command: sh -c "apk add --no-cache tor && tor -f /etc/tor/torrc"
+    # COMMAND EXPLANATION:
+    # 1. Install Tor
+    # 2. Give 'tor' user ownership of data folder
+    # 3. Switch user to 'tor' and run the daemon
+    command: >
+      sh -c "apk add --no-cache tor &&
+             chown -R tor /var/lib/tor &&
+             su tor -c 'tor -f /etc/tor/torrc'"
     volumes:
       - ./torrc:/etc/tor/torrc
     restart: always
     logging: { driver: none }
     networks: [ hydra-net ]
+    mem_limit: 256m
+    cpus: 0.5
 
-  # 2. XRAY (Now uses a custom entrypoint for secrets)
+  # =========================================
+  # 2. XRAY (Client Handler)
+  # =========================================
   xray:
     image: teddysun/xray:latest
     container_name: hydra-xray
@@ -26,8 +39,12 @@ services:
     depends_on: [ tor ]
     logging: { driver: none }
     networks: [ hydra-net ]
+    mem_limit: 256m
+    cpus: 0.3
 
+  # =========================================
   # 3. CLOUDFLARE TUNNEL
+  # =========================================
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: hydra-tunnel
@@ -36,8 +53,12 @@ services:
     depends_on: [ xray ]
     logging: { driver: none }
     networks: [ hydra-net ]
+    mem_limit: 256m
+    cpus: 0.3
 
-  # 4. BOT (Builds from folder)
+  # =========================================
+  # 4. BOT (Controller)
+  # =========================================
   bot:
     build: ./bot
     container_name: hydra-bot
@@ -49,6 +70,8 @@ services:
     restart: always
     logging: { driver: none }
     networks: [ hydra-net ]
+    mem_limit: 128m
+    cpus: 0.2
 
 networks:
   hydra-net:

@@ -1,7 +1,23 @@
+# --- PORTS ---
 SocksPort 0.0.0.0:9050
+
+# --- ANONYMITY RULES ---
+# 1. Be a Client only (Don't help the network, just use it)
+ClientOnly 1
+
+# 2. Strict Enforcement
 StrictNodes 1
+
+# 3. Privacy Whitelist (Safe Jurisdictions)
+# Tor will ONLY use these countries for the final hop.
 ExitNodes {ch},{is},{ro},{se},{nl},{fi},{no},{de},{at},{cz}
+
+# --- PERFORMANCE ---
 CircuitBuildTimeout 10
 KeepalivePeriod 60
+NumEntryGuards 3
+
+# --- LOGGING & STORAGE ---
+# Send logs to the void (Zero Logs)
 Log notice file /dev/null
 DataDirectory /var/lib/tor

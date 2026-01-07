@@ -1,0 +1,76 @@
+version: '2.4' 
+# We use version 2.4 because it supports limits without 'swarm mode'
+
+services:
+  # =========================================
+  # 1. TOR (Heavy on RAM for Circuits)
+  # =========================================
+  tor:
+    image: alpine:latest
+    container_name: hydra-tor
+    command: sh -c "apk add --no-cache tor && tor -f /etc/tor/torrc"
+    volumes:
+      - ./torrc:/etc/tor/torrc
+    restart: always
+    logging: { driver: none }
+    networks: [ hydra-net ]
+    # LIMITS
+    mem_limit: 256m
+    cpus: 0.3
+
+  # =========================================
+  # 2. XRAY (Heavy on CPU for Encryption)
+  # =========================================
+  xray:
+    image: teddysun/xray:latest
+    container_name: hydra-xray
+    entrypoint: /bin/sh /etc/xray/entrypoint.sh
+    volumes:
+      - ./xray/config.json:/etc/xray/config.json
+      - ./xray/entrypoint.sh:/etc/xray/entrypoint.sh
+    environment:
+      - HYDRA_UUID=${HYDRA_UUID}
+    restart: always
+    depends_on: [ tor ]
+    logging: { driver: none }
+    networks: [ hydra-net ]
+    # LIMITS
+    mem_limit: 256m
+    cpus: 0.3
+
+  # =========================================
+  # 3. CLOUDFLARE TUNNEL (Moderate Usage)
+  # =========================================
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: hydra-tunnel
+    command: tunnel run --token ${HYDRA_TOKEN}
+    restart: always
+    depends_on: [ xray ]
+    logging: { driver: none }
+    networks: [ hydra-net ]
+    # LIMITS
+    mem_limit: 256m
+    cpus: 0.3
+
+  # =========================================
+  # 4. BOT (Very Light)
+  # =========================================
+  bot:
+    build: ./bot
+    container_name: hydra-bot
+    environment:
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_ADMIN_ID=${TG_ADMIN_ID}
+      - HYDRA_UUID=${HYDRA_UUID}
+      - VPN_DOMAIN=${VPN_DOMAIN}
+    restart: always
+    logging: { driver: none }
+    networks: [ hydra-net ]
+    # LIMITS (Bot needs less)
+    mem_limit: 128m
+    cpus: 0.2
+
+networks:
+  hydra-net:
+    driver: bridge

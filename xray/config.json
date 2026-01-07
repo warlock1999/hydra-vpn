@@ -1,0 +1,33 @@
+{
+  "log": { "loglevel": "none", "access": "none", "error": "none" },
+  "inbounds": [
+    {
+      "port": 8080,
+      "listen": "0.0.0.0",
+      "protocol": "vmess",
+      "settings": {
+        "clients": [ { "id": "UUID-PLACEHOLDER", "alterId": 0 } ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": { "path": "/hydra" }
+      },
+      "sniffing": { "enabled": true, "destOverride": ["http", "tls"] }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "tor",
+      "protocol": "socks",
+      "settings": { "servers": [ { "address": "hydra-tor", "port": 9050 } ] }
+    },
+    { "tag": "block", "protocol": "blackhole", "settings": {} }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      { "type": "field", "domain": ["geosite:category-ads-all"], "outboundTag": "block" },
+      { "type": "field", "network": "tcp,udp", "outboundTag": "tor" }
+    ]
+  }
+}

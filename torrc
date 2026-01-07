@@ -1,0 +1,7 @@
+SocksPort 0.0.0.0:9050
+StrictNodes 1
+ExitNodes {ch},{is},{ro},{se},{nl},{fi},{no},{de},{at},{cz}
+CircuitBuildTimeout 10
+KeepalivePeriod 60
+Log notice file /dev/null
+DataDirectory /var/lib/tor

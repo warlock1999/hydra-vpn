@@ -1,0 +1,55 @@
+version: '3'
+
+services:
+  # 1. TOR
+  tor:
+    image: alpine:latest
+    container_name: hydra-tor
+    command: sh -c "apk add --no-cache tor && tor -f /etc/tor/torrc"
+    volumes:
+      - ./torrc:/etc/tor/torrc
+    restart: always
+    logging: { driver: none }
+    networks: [ hydra-net ]
+
+  # 2. XRAY (Now uses a custom entrypoint for secrets)
+  xray:
+    image: teddysun/xray:latest
+    container_name: hydra-xray
+    entrypoint: /bin/sh /etc/xray/entrypoint.sh
+    volumes:
+      - ./xray/config.json:/etc/xray/config.json
+      - ./xray/entrypoint.sh:/etc/xray/entrypoint.sh
+    environment:
+      - HYDRA_UUID=${HYDRA_UUID}
+    restart: always
+    depends_on: [ tor ]
+    logging: { driver: none }
+    networks: [ hydra-net ]
+
+  # 3. CLOUDFLARE TUNNEL
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: hydra-tunnel
+    command: tunnel run --token ${HYDRA_TOKEN}
+    restart: always
+    depends_on: [ xray ]
+    logging: { driver: none }
+    networks: [ hydra-net ]
+
+  # 4. BOT (Builds from folder)
+  bot:
+    build: ./bot
+    container_name: hydra-bot
+    environment:
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_ADMIN_ID=${TG_ADMIN_ID}
+      - HYDRA_UUID=${HYDRA_UUID}
+      - VPN_DOMAIN=${VPN_DOMAIN}
+    restart: always
+    logging: { driver: none }
+    networks: [ hydra-net ]
+
+networks:
+  hydra-net:
+    driver: bridge
